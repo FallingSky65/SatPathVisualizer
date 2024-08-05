@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 project(SatPathVisualizer)
 
+# Find raylib (needs to be installed by user)
 find_package(raylib REQUIRED)
 
+# Find raylib-cpp (does not need to be installed by user, will clone and build statically)
 find_package(raylib_cpp QUIET)
 if (NOT raylib_cpp_FOUND)
     include(FetchContent)
@@ -14,8 +16,10 @@ if (NOT raylib_cpp_FOUND)
     FetchContent_MakeAvailable(raylib_cpp)
 endif()
 
+# Find HDF5 C++ (needs to be installed by user)
 find_package(HDF5 COMPONENTS C CXX REQUIRED)
 
+# Find OpenCV (needs to be installed by user)
 find_package(OpenCV REQUIRED)
 
 set(SOURCES
