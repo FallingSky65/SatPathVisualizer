@@ -17,3 +17,23 @@ SatPathVisualizer depends on [raylib](https://github.com/raysan5/raylib), [rayli
 ``` bash
 brew install raylib hdf5 opencv
 ```
+
+### Ubuntu
+
+1. Install raylib by following the [raylib wiki](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux) (You may need to also install pkg-config first if you get errors configuring the build: `sudo apt install pkg-config`)
+
+2. Install hdf5 
+``` bash
+sudo apt update
+sudo apt install libhdf5-dev
+```
+
+3. Install opencv 
+``` bash
+sudo apt update
+sudo apt install libopencv-dev
+```
+
+## Example
+
+To use SatPathVisualizer, you can clone and edit the [example project](https://github.com/FallingSky65/SatPathVisualizerExample).

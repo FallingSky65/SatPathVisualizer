@@ -30,5 +30,5 @@ set(SOURCES
 )
 
 add_library(SatPathVisualizer STATIC ${SOURCES})
-target_include_directories(SatPathVisualizer PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(SatPathVisualizer PUBLIC ${PROJECT_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS})
 target_link_libraries(SatPathVisualizer PUBLIC raylib raylib_cpp ${HDF5_CXX_LIBRARIES} ${OpenCV_LIBS})
