@@ -46,7 +46,7 @@ void Visualizer::render(int screenWidth, int screenHeight, int renderFPS, std::s
     hsize_t dataIndexRow = 0;
     hsize_t dataIndexCol = 0;
 
-    int codec = cv::VideoWriter::fourcc('x', '2', '6', '4');
+    int codec = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
     cv::VideoWriter videoWriter;
 
     raylib::Window window(screenWidth, screenHeight, TextFormat("SatPathVisualizer %ix%i %s", screenWidth, screenHeight, outputFile.c_str()));
