@@ -41,7 +41,7 @@ Visualizer::Visualizer() {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
 }
 
-void Visualizer::render(int screenWidth, int screenHeight, int renderFPS, std::string outputFile, std::string sphereTextureFile, std::string satellitesFile, std::string satelliteTextureFile, int satellitesCount, bool saveRender) {
+void Visualizer::render(int screenWidth, int screenHeight, int renderFPS, std::string outputFile, std::string sphereTextureFile, std::string satellitesFile, std::string satelliteTextureFile, float satelliteTextureSize, int satellitesCount, bool saveRender) {
 
     hsize_t dataIndexRow = 0;
     hsize_t dataIndexCol = 0;
@@ -132,7 +132,7 @@ void Visualizer::render(int screenWidth, int screenHeight, int renderFPS, std::s
                 for (int i = 0; i < satellites.size(); i++)
                     satellites[i].drawSatTrail(dataIndexCol, dataIndexRow);
                 for (int i = 0; i < satellites.size(); i++)
-                    satelliteTexture.DrawBillboard(camera, Vector3Lerp(satellites[i].position, camera.position, 0.05), 0.07, WHITE);
+                    satelliteTexture.DrawBillboard(camera, Vector3Lerp(satellites[i].position, camera.position, 0.05), satelliteTextureSize, WHITE);
             }
             camera.EndMode();
         }

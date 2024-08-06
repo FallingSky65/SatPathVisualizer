@@ -55,5 +55,5 @@ cv::Mat textureToMat(Texture2D texture);
 class Visualizer {
 public:
     Visualizer();
-    void render(int screenWidth, int screenHeight, int renderFPS, std::string outputFile, std::string sphereTextureFile, std::string satellitesFile, std::string satelliteTextureFile, int satellitesCount, bool saveRender = false);
+    void render(int screenWidth, int screenHeight, int renderFPS, std::string outputFile, std::string sphereTextureFile, std::string satellitesFile, std::string satelliteTextureFile, float satelliteTextureSize, int satellitesCount, bool saveRender = false);
 };
