@@ -9,10 +9,6 @@
 #include <raymath.h>
 #include <vector>
 
-int ROWSTEP = 40;
-int COLSTEP = 24;
-const int cutoff = 5000;
-
 cv::Mat textureToMat(Texture2D texture) {
     Image image = LoadImageFromTexture(texture);
     Color* pixels = LoadImageColors(image);
@@ -41,138 +37,95 @@ Visualizer::Visualizer() {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
 }
 
-void Visualizer::render(int screenWidth, int screenHeight, int renderFPS, std::string outputFile, std::string sphereTextureFile, std::string satellitesFile, std::string satelliteTextureFile, float satelliteTextureSize, int satellitesCount, bool saveRender) {
+void Visualizer::beginRender(int screenWidth, int screenHeight, int _renderFPS, std::string sphereTextureFile, std::string satellitesFile, int satellitesCount, std::string _outputFile) {
+    
+    renderFPS = _renderFPS;
+    outputFile = _outputFile;
 
-    hsize_t dataIndexRow = 0;
-    hsize_t dataIndexCol = 0;
+    window.Init(screenWidth, screenHeight, TextFormat("SatPathVisualizer %ix%i %s", screenWidth, screenHeight, outputFile.c_str()));
 
-    int codec = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
-    cv::VideoWriter videoWriter;
+    satellites = getSatellites(satellitesFile);
 
-    raylib::Window window(screenWidth, screenHeight, TextFormat("SatPathVisualizer %ix%i %s", screenWidth, screenHeight, outputFile.c_str()));
+    camera.SetPosition({0.0f, 0.0f, 4.0f});
+    camera.SetTarget({0.0f, 0.0f, 0.0f});
+    camera.SetUp({0.0f, 1.0f, 0.0f});
+    camera.SetFovy(35.0f);
+    camera.SetProjection(CAMERA_PERSPECTIVE);
 
-    std::vector<Satellite> satellites = getSatellites(satellitesFile);
+    //canvas.Load(screenWidth, screenHeight);
+    canvas = raylib::RenderTexture2D(screenWidth, screenHeight);
 
-    int frameCount = 0;
-    while (dataIndexRow < satellites[0].dims[0]) {
-        frameCount++;
-        dataIndexCol += COLSTEP;
-        if (dataIndexCol >= satellites[0].dims[1]) {
-            dataIndexCol = 0;
-            dataIndexRow += ROWSTEP;
-            if (dataIndexRow >= cutoff) {
-                ROWSTEP = 50;
-                COLSTEP = 40;
-            }
-        }
-    }
-    const int totalFrameCount = frameCount;
-    dataIndexRow = 0; dataIndexCol = 0;
-    frameCount = 0;
-    COLSTEP = 24;
-
-    printf("duration: %i seconds\n", totalFrameCount/60);
-
-    raylib::Camera3D camera(
-        {0.0f, 0.0f, 4.0f},     // Position
-        {0.0f, 0.0f, 0.0f},     // Target
-        {0.0f, 1.0f, 0.0f},     // Up
-        35.0f,                  // FOV Y
-        CAMERA_PERSPECTIVE      // Camera type
-    );
-    raylib::RenderTexture2D canvas(screenWidth, screenHeight);
-
-    raylib::Model sphereModel(GenMeshUVSphere(1.0f, SPHERE_RES, SPHERE_RES*2));
-    raylib::Texture2D sphereTexture(sphereTextureFile);
+    sphereModel.Load(GenMeshUVSphere(1.0f, SPHERE_RES, SPHERE_RES*2));
+    //sphereModel = raylib::Model(GenMeshUVSphere(1.0f, SPHERE_RES, SPHERE_RES*2));
+    sphereTexture.Load(sphereTextureFile);
+    //sphereTexture = raylib::Texture2D(sphereTextureFile);
     sphereModel.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = sphereTexture;
+
     for (int i = 0; i < satellites.size() && i < MAX_SATELLITES; i++)
         sphereModel.materials[0].maps[MATERIAL_MAP_METALNESS+i].texture = satellites[i].satRenderTexture.texture;
-
-    raylib::Shader shader("SatPathVisualizer/src/shaders/vert.glsl", "SatPathVisualizer/src/shaders/frag.glsl");
-    shader.locs[SHADER_LOC_VECTOR_VIEW] = shader.GetLocation("viewPos");
+    
+    //shader->Load("SatPathVisualizer/src/shaders/vert.glsl", "SatPathVisualizer/src/shaders/frag.glsl");
+    shader = new raylib::Shader("SatPathVisualizer/src/shaders/vert.glsl", "SatPathVisualizer/src/shaders/frag.glsl");
+    shader->locs[SHADER_LOC_VECTOR_VIEW] = shader->GetLocation("viewPos");
     for (int i = 0; i < MAX_SATELLITES; i++)
-        shader.locs[SHADER_LOC_MAP_METALNESS+i] = shader.GetLocation(TextFormat("texture%i", i+1));
+        shader->locs[SHADER_LOC_MAP_METALNESS+i] = shader->GetLocation(TextFormat("texture%i", i+1));
 
-    sphereModel.materials[0].shader = shader;
+    sphereModel.materials[0].shader = *shader;
+}
 
-    Image satelliteImage = LoadImage(satelliteTextureFile.c_str());
-    ImageFlipVertical(&satelliteImage);
-    raylib::Texture2D satelliteTexture(satelliteImage);
-    UnloadImage(satelliteImage);
+void Visualizer::endRender() {
+    videoWriter.release();
+}
 
-    if (!saveRender) SetTargetFPS(renderFPS);
+void Visualizer::updateSatellites(int swathIndex) {
+    for (int i = 0; i < satellites.size(); i++)
+        satellites[i].updateSwaths(swathIndex);
+}
 
-    // Steps of each loop iteration
-    // 1. Update satellites
-    // 2. Update camera
-    // 3. Draw to canvas 
-    // 4. Draw canvas to screen
-    // 5. Save canvas as a frame of the video
-    while (!window.ShouldClose() && dataIndexRow < satellites[0].dims[0]) {
-        frameCount++;
+void Visualizer::updateCamera(int followSatellite, int positionIndex) {
+    if (followSatellite < 0 || followSatellite >= satellites.size()) {
+        TraceLog(LOG_WARNING, "followSatellite out of range, no such satellite");
+        return;
+    }
+    camera.SetPosition(Vector3RotateByAxisAngle({0.0, 0.0, 4.0}, camera.GetUp(), satellites[followSatellite].satPos[positionIndex].x*DEG2RAD));
+    camera.SetTarget({0.0, 0.0, 0.0});
+    shader->SetValue(shader->locs[SHADER_LOC_VECTOR_VIEW], &camera.position.x, SHADER_UNIFORM_VEC3);
+}
 
-        // 1. Update satellites
-        for (int i = 0; i < satellites.size(); i++)
-            satellites[i].updateSwaths(dataIndexCol, dataIndexRow);
-
-        // 2. Update camera
-        float deg1 = mixDegree(satellites[0].satPos[dataIndexRow].x, satellites[0].satPos[std::min(dataIndexRow+ROWSTEP, satellites[0].dims[0]-1)].x, (float)dataIndexCol/satellites[0].dims[1]);
-        float deg2 = mixDegree(satellites[1].satPos[dataIndexRow].x, satellites[1].satPos[std::min(dataIndexRow+ROWSTEP, satellites[0].dims[0]-1)].x, (float)dataIndexCol/satellites[0].dims[1]);
-        camera.SetPosition(Vector3RotateByAxisAngle({0.0, 0.0, 4.0}, camera.GetUp(), deg1*DEG2RAD));
-        camera.SetTarget({0.0, 0.0, 0.0});
-        shader.SetValue(shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position.x, SHADER_UNIFORM_VEC3);
-
-        // 3. Draw to canvas
-        canvas.BeginMode();
+void Visualizer::drawToCanvas(int positionIndex) {
+    canvas.BeginMode();
+    {
+        ClearBackground(BLACK);
+        camera.BeginMode();
         {
-            ClearBackground(BLACK);
-            camera.BeginMode();
-            {
-                sphereModel.Draw({0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
-                for (int i = 0; i < satellites.size(); i++)
-                    satellites[i].drawSatTrail(dataIndexCol, dataIndexRow);
-                for (int i = 0; i < satellites.size(); i++)
-                    satelliteTexture.DrawBillboard(camera, Vector3Lerp(satellites[i].position, camera.position, 0.05), satelliteTextureSize, WHITE);
-            }
-            camera.EndMode();
+            sphereModel.Draw({0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+            for (int i = 0; i < satellites.size(); i++)
+                satellites[i].drawSatTrail(positionIndex);
         }
-        canvas.EndMode();
+        camera.EndMode();
+    }
+    canvas.EndMode();
+}
 
-        dataIndexCol += COLSTEP;
-        if (dataIndexCol >= satellites[0].dims[1]) {
-            dataIndexCol = 0;
-            dataIndexRow += ROWSTEP;
-            if (dataIndexRow >= cutoff) {
-                ROWSTEP = 50;
-                COLSTEP = 40;
-            }
-        }
+void Visualizer::drawCanvasToScreen() {
+    window.BeginDrawing();
+    {
+        ClearBackground(RAYWHITE);
+        canvas.GetTexture().Draw();
+        DrawFPS(10, 10);
+    }
+    window.EndDrawing();
+}
 
-        window.SetTitle(TextFormat("SatPathVisualizer %ix%i %s %.2f minutes left", screenWidth, screenHeight, outputFile.c_str(), (float)(GetTime()/frameCount*totalFrameCount-GetTime())/60.0f));
+void Visualizer::saveFrame() {
+    cv::Mat frame = textureToMat(canvas.texture);
 
-        // 4. Draw canvas to screen
-        BeginDrawing();
-        {
-            ClearBackground(RAYWHITE);
-            canvas.GetTexture().Draw();
-            DrawFPS(10, 10);
-        }
-        EndDrawing();
-
-        // 5. Save canvas as a frame of the video
-        if (saveRender) {
-            cv::Mat frame = textureToMat(canvas.texture);
-
-            if (!videoWriter.isOpened()) {
-                cv::Size frameSize = frame.size();
-                videoWriter.open(outputFile, codec, renderFPS, frameSize, true);
-                if (!videoWriter.isOpened())
-                    TraceLog(LOG_WARNING, "Failed to open videoWriter");
-            }
-
-            videoWriter.write(frame);
-        }
+    if (!videoWriter.isOpened()) {
+        cv::Size frameSize = frame.size();
+        videoWriter.open(outputFile, codec, renderFPS, frameSize, true);
+        if (!videoWriter.isOpened())
+            TraceLog(LOG_WARNING, "Failed to open videoWriter");
     }
 
-    videoWriter.release();
+    videoWriter.write(frame);
 }

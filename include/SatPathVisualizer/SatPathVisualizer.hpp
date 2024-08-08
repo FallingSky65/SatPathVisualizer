@@ -1,5 +1,6 @@
 #pragma once
 
+#include <opencv2/videoio.hpp>
 #include <raylib.h>
 #include <raylib-cpp.hpp>
 #include <H5Cpp.h>
@@ -12,8 +13,7 @@
 
 #define SATELLITE_ALTITUDE 1.15
 
-extern int ROWSTEP;
-extern int COLSTEP;
+#define TRAIL_STEP 40
 
 // Utils.cpp
 Vector3 convertLonLat3D(float longitude, float latitude);
@@ -33,6 +33,7 @@ class Satellite {
 public:
     Vector3 position;
     Color trailColor, swathColor;
+    int prevSwathIndex;
     std::vector<hsize_t> dims;
     std::vector<Vector2> satPos;
     std::vector<Vector2> satSwath;
@@ -40,8 +41,8 @@ public:
     raylib::RenderTexture2D satRenderTexture;
     Satellite(H5::H5File file, int satIndex, Color trailColor, Color swathColor);
     SatAttr getSatAttr(H5::H5File file, std::string datasetName);
-    void updateSwaths(hsize_t dataIndexCol, hsize_t dataIndexRow);
-    void drawSatTrail(hsize_t dataIndexCol, hsize_t dataIndexRow);
+    void updateSwaths(int swathIndex);
+    void drawSatTrail(int positionIndex);
 };
 
 std::vector<Satellite> getSatellites(std::string fileName);
@@ -54,6 +55,24 @@ cv::Mat textureToMat(Texture2D texture);
 
 class Visualizer {
 public:
+    const int codec = cv::VideoWriter::fourcc('a', 'v', 'c', '1');
+    int renderFPS;
+    std::string outputFile;
+    cv::VideoWriter videoWriter;
+    raylib::Window window;
+    raylib::Camera3D camera;
+    raylib::RenderTexture2D canvas;
+    raylib::Model sphereModel;
+    raylib::Texture2D sphereTexture;
+    raylib::Shader* shader;
+    std::vector<Satellite> satellites;
+
     Visualizer();
-    void render(int screenWidth, int screenHeight, int renderFPS, std::string outputFile, std::string sphereTextureFile, std::string satellitesFile, std::string satelliteTextureFile, float satelliteTextureSize, int satellitesCount, bool saveRender = false);
+    void beginRender(int screenWidth, int screenHeight, int _renderFPS, std::string sphereTextureFile, std::string satellitesFile, int satellitesCount, std::string _outputFile);
+    void endRender();
+    void updateSatellites(int swathIndex);
+    void updateCamera(int followSatellite, int positionIndex);
+    void drawToCanvas(int positionIndex);
+    void drawCanvasToScreen();
+    void saveFrame();
 };

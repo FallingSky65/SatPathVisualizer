@@ -6,6 +6,7 @@ Satellite::Satellite(H5::H5File file, int satIndex, Color _trailColor, Color _sw
     satRenderTexture = raylib::RenderTexture2D(TEXTURE_SIZE*2, TEXTURE_SIZE);
     trailColor = _trailColor;
     swathColor = _swathColor;
+    prevSwathIndex = 0;
     SatAttr lon = getSatAttr(file, TextFormat("/lon%i", satIndex));
     SatAttr lat = getSatAttr(file, TextFormat("/lat%i", satIndex));
     SatAttr lonSwath = getSatAttr(file, TextFormat("/lon%i_swath", satIndex));
@@ -59,34 +60,30 @@ SatAttr Satellite::getSatAttr(H5::H5File file, std::string datasetName) {
     return satAttr;
 }
 
-void Satellite::updateSwaths(hsize_t dataIndexCol, hsize_t dataIndexRow) {
+void Satellite::updateSwaths(int swathIndex) {
     satRenderTexture.BeginMode();
     {
-        for (hsize_t i = dataIndexRow; i <= dataIndexRow + ROWSTEP; i++) {
-            for (hsize_t j = dataIndexCol; j <= dataIndexCol + COLSTEP && i*dims[1]+j < dims[0]*dims[1]; j++) {
-                if (std::abs(satSwath[i*dims[1]+j].y) <= 35.0f) {
-                    float x = (180.0f + satSwath[i*dims[1]+j].x)*TEXTURE_SIZE/180.0f;
-                    float y = (90.0f - satSwath[i*dims[1]+j].y)*TEXTURE_SIZE/180.0f;
-                    DrawCircle(x, y, 5.0f, swathColor);
-                }
-            }
+        for (int i = prevSwathIndex; i <= swathIndex; i++) {
+            float x = (180.0f + satSwath[i].x)*TEXTURE_SIZE/180.0f;
+            float y = (90.0f - satSwath[i].y)*TEXTURE_SIZE/180.0f;
+            DrawCircle(x, y, 5.0f, swathColor);
+
         }
+        prevSwathIndex = swathIndex;
     }
     satRenderTexture.EndMode();
 }
 
-void Satellite::drawSatTrail(hsize_t dataIndexCol, hsize_t dataIndexRow) {
-    for (hsize_t i = 0; i + ROWSTEP < dims[0]; i += ROWSTEP) {
+void Satellite::drawSatTrail(int positionIndex) {
+    for (int i = 0; i < positionIndex; i += TRAIL_STEP) {
         Vector3 start, end;
-       start = convertLonLat3D(satPos[i], SATELLITE_ALTITUDE);
-        if (i + ROWSTEP <= dataIndexRow) {
-            end = convertLonLat3D(satPos[i + ROWSTEP], SATELLITE_ALTITUDE);
+        start = convertLonLat3D(satPos[i], SATELLITE_ALTITUDE);
+        if (i + TRAIL_STEP < positionIndex) {
+            end = convertLonLat3D(satPos[i + TRAIL_STEP], SATELLITE_ALTITUDE);
             DrawCylinderEx(start, end, 0.005f, 0.005f, 4, trailColor);
         } else {
-            hsize_t j = std::min(dims[0] - 1, i + ROWSTEP*dataIndexCol/dims[1]);
-            position = convertLonLat3D(satPos[j], SATELLITE_ALTITUDE);
+            position = convertLonLat3D(satPos[positionIndex], SATELLITE_ALTITUDE);
             DrawCylinderEx(start, position, 0.005f, 0.005f, 4, trailColor);
-            if (std::abs(satSwath[j*dims[1]+dataIndexCol].y) <= 35.0f) DrawCylinderEx(position, convertLonLat3D(satSwath[j*dims[1]+dataIndexCol]), 0.005f, 0.005f, 4, RED);
             break;
         }
     }
