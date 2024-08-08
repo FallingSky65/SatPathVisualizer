@@ -46,11 +46,11 @@ void Visualizer::beginRender(int screenWidth, int screenHeight, int _renderFPS, 
 
     satellites = getSatellites(satellitesFile);
 
-    camera.SetPosition({0.0f, 0.0f, 4.0f});
+    camera.SetPosition({0.0f, 0.0f, 16.0f});
     camera.SetTarget({0.0f, 0.0f, 0.0f});
     camera.SetUp({0.0f, 1.0f, 0.0f});
-    camera.SetFovy(35.0f);
-    camera.SetProjection(CAMERA_PERSPECTIVE);
+    camera.SetFovy(2.5f);
+    camera.SetProjection(CAMERA_ORTHOGRAPHIC);
 
     //canvas.Load(screenWidth, screenHeight);
     canvas = raylib::RenderTexture2D(screenWidth, screenHeight);
@@ -87,7 +87,7 @@ void Visualizer::updateCamera(int followSatellite, int positionIndex) {
         TraceLog(LOG_WARNING, "followSatellite out of range, no such satellite");
         return;
     }
-    camera.SetPosition(Vector3RotateByAxisAngle({0.0, 0.0, 4.0}, camera.GetUp(), satellites[followSatellite].satPos[positionIndex].x*DEG2RAD));
+    camera.SetPosition(Vector3RotateByAxisAngle({0.0, 0.0, 16.0}, camera.GetUp(), satellites[followSatellite].satPos[positionIndex].x*DEG2RAD));
     camera.SetTarget({0.0, 0.0, 0.0});
     shader->SetValue(shader->locs[SHADER_LOC_VECTOR_VIEW], &camera.position.x, SHADER_UNIFORM_VEC3);
 }
