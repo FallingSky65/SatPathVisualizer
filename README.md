@@ -18,7 +18,7 @@ SatPathVisualizer depends on [cmake](https://cmake.org), [raylib](https://github
 brew install cmake raylib hdf5 opencv
 ```
 
-### Ubuntu
+### Ubuntu / Debian
 
 1. Install cmake
 ``` bash
@@ -26,12 +26,19 @@ sudo apt update && sudo apt upgrade
 sudo apt install cmake
 ```
 
-2. Install raylib by following the [raylib wiki](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux) (You may need to also install pkg-config first if you get errors configuring the build: `sudo apt install pkg-config`, and if your ubuntu distribution uses Wayland, make sure to build raylib for wayland)
+2. Install raylib by following the [raylib wiki](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux). Make sure to build using CMake (You may need to also install pkg-config first if you get errors configuring the build: `sudo apt install pkg-config`, and if your ubuntu/debian distribution uses Wayland, make sure to build raylib for wayland)
 
 3. Install hdf5, opencv 
 ``` bash
 sudo apt update && sudo apt upgrade
 sudo apt install libhdf5-dev libopencv-dev
+```
+
+### Fedora
+
+1. Install packages
+``` bash
+sudo dnf install cmake raylib-devel hdf5-devel opencv-devel
 ```
 
 ### Arch Linux
