@@ -1,6 +1,6 @@
 # SatPathVisualizer
 
-[SatPathVisualizer](https://github.com/FallingSky65/SatPathVisualizer) is a C++ library for creating satellite orbit path visualizations.
+[SatPathVisualizer](https://github.com/FallingSky65/SatPathVisualizer) is a C++ library for creating satellite orbit path visualizations. An example video made with this library can be seen on [YouTube](https://youtu.be/PbOrMjX0KfM?si=mG8EJVs6aDeIXKlX)
 
 ## Installing Dependencies
 
